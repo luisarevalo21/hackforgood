@@ -5,10 +5,6 @@
 /.pnp
 .pnp.js
 
-/hsg
-
-hsg
-.hsg
 # testing
 /coverage
 
@@ -25,6 +21,3 @@ hsg
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-.env
-
