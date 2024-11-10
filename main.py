@@ -23,6 +23,7 @@ class CaseInput(BaseModel):
     case_text: str
 
 
+
 # Import the Pinecone library
 # Use your Pinecone environment
 pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"),
@@ -118,6 +119,7 @@ index = pc.Index(index_name)
 
 def add_chunks_to_rag_database(pdf_name, chunks):
     # print('chunks', chunks)
+#     print('chunks', chunks)
     embeddings = generate_embeddings(chunks)
     for i, embedding in enumerate(embeddings):
         metadata = {"pdf_name": pdf_name,
@@ -306,6 +308,33 @@ def parse_openai_response(openai_response_text):
     return returnObj
 
 
+# =======
+
+# #     # Search the index for the three most similar vectors
+# #     results = index.query(
+# #         namespace="pdf-chunks-index",
+# #         vector=query_embedding[0].values,
+# #         top_k=3,
+# #         include_values=False,
+# #         include_metadata=True
+# #     )
+# #     return results
+# def query_pinecone(query_text, top_k=30):
+#     query_embedding = generate_embeddings([query_text])[0]
+#     results = index.query(query_embedding, top_k=top_k, include_metadata=True)
+#     return results
+
+
+# # Example usage
+# query_text = "who won their most recent case?"
+# search_results = query_pinecone(query_text)
+# for result in search_results['matches']:
+#     # Retrieve the text of the most relevant chunks
+#     print(result['metadata']['text'])
+#     # use open ai to summarize the text
+
+
+# >>>>>>> main
 # res = query_pinecone(query_text)
 # print(res)
 # add_chunks_to_rag_database(
