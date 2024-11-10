@@ -1,3 +1,7 @@
+import re
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+from typing import Union
 from pinecone import ServerlessSpec
 from pinecone.grpc import PineconeGRPC as Pinecone
 import os
@@ -7,9 +11,16 @@ import pdfplumber
 import pinecone
 from openai import OpenAI
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from pydantic import BaseModel
 
 load_dotenv()  # take environment variables from .env.
 client = OpenAI(api_key=os.environ.get("OPEN_AI_KEY"))
+# Define a Pydantic model for the request body
+
+
+class CaseInput(BaseModel):
+    case_text: str
 
 
 # Import the Pinecone library
@@ -106,7 +117,7 @@ index = pc.Index(index_name)
 
 
 def add_chunks_to_rag_database(pdf_name, chunks):
-    print('chunks', chunks)
+    # print('chunks', chunks)
     embeddings = generate_embeddings(chunks)
     for i, embedding in enumerate(embeddings):
         metadata = {"pdf_name": pdf_name,
@@ -143,16 +154,156 @@ def add_chunks_to_rag_database(pdf_name, chunks):
 def query_pinecone(query_text, top_k=30):
     query_embedding = generate_embeddings([query_text])[0]
     results = index.query(query_embedding, top_k=top_k, include_metadata=True)
+    # print(results)
     return results
 
 
 # Example usage
-query_text = "who won their most recent case?"
-search_results = query_pinecone(query_text)
-for result in search_results['matches']:
+# query_text = "who won their most recent case?"
+# search_results = query_pinecone(query_text)
+# for result in search_results['matches']:
+#     # Retrieve the text of the most relevant chunks
+#     print(result['metadata']['text'])
+#     # use open ai to summarize the text
+
+app = FastAPI()
+
+origins = [
+    "http://localhost:3000",
+    "localhost:3000"
+]
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+
+def summarize_with_openai(text):
+    # Use OpenAI to summarize the retrieved text in the desired format
+    # return object like she needs the aray
+    response = client.completions.create(
+        model="gpt-3.5-turbo-instruct",
+        prompt=f"You are legal consultant please summarize the following cases into the format which is based on court findings:\n\n"
+        f"Key Issues:\n- List of primary issues reported\n"
+        f"Suggested Precedents:\n- Similar cases with outcomes\n"
+        f"Improvement Areas:\n- Suggested improvements based on the text.\n\n"
+        f"Text:\n{text}",
+        temperature=0.5,
+        max_tokens=150
+    )
+    print(response)
+    # Return the structured summary text
+    return response.choices[0].text.strip()
+
+
+@app.post('/anaylze_user_input')
+async def analyze_user_input(case_input: CaseInput):
+
+    # Extract the text from the request body
+    # case_text = case_input.case_text
+
+    structured_response = await generate_a_response(case_input.case_text)
+    # Query Pinecone to search for relevant chunks
+
+    # Initialize an empty response string
+
     # Retrieve the text of the most relevant chunks
-    print(result['metadata']['text'])
-    # use open ai to summarize the text
+
+    # Use OpenAI to summarize the retrieved text
+
+    return structured_response
+    # return structured_response
+
+# @app.get("/analyze_petition")
+
+
+async def generate_a_response(user_text):
+    pinecone_response = ""
+    query_text = "What are the key issues, suggested precedents, and improvement areas in related cases?" + user_text
+    print('QUERY TEXT', query_text)
+    search_results = query_pinecone(query_text)
+    print('SEARCH RESULTS', search_results)
+    for result in search_results['matches']:
+        # Retrieve the text of the most relevant chunks
+        pinecone_response += result['metadata']['text']
+        # use open ai to summarize the text
+
+    # return response
+    response = summarize_with_openai(pinecone_response)
+    print("here")
+    print(response)
+    structured_response = parse_openai_response(response)
+    return structured_response
+
+    # # Extract response text and split it into the required sections
+    # summary_text = response
+    # key_issues = []
+    # suggested_precedents = []
+    # improvement_areas = []
+
+    # for line in summary_text.split("\n"):
+    #     if line.startswith("-"):
+    #         if "issues" in line.lower():
+    #             key_issues.append(line[2:].strip())
+    #         elif "precedents" in line.lower():
+    #             suggested_precedents.append(line[2:].strip())
+    #         elif "improvements" in line.lower():
+    #             improvement_areas.append(line[2:].strip())
+
+    # returnObj = {
+    #     "key_arguments": key_issues,
+    #     "suggested_precedents": suggested_precedents,
+    #     "improvement_areas": improvement_areas,
+    # }
+    # # print(returnObj)
+    # return returnObj
+
+
+def parse_openai_response(openai_response_text):
+    # Initialize lists to store each section
+    key_issues = []
+    suggested_precedents = []
+    improvement_areas = []
+
+    # Split the response text into lines
+    lines = openai_response_text.strip().split("\n")
+
+    # Define the current section being parsed
+    current_section = None
+
+    # Parse each line based on the section it belongs to
+    for line in lines:
+        if "Key Issues:" in line:
+            current_section = "key_issues"
+        elif "Suggested Precedents:" in line:
+            current_section = "suggested_precedents"
+        elif "Improvement Areas:" in line:
+            current_section = "improvement_areas"
+        elif re.match(r"\d+\.", line.strip()):
+            item_text = line.strip().split(maxsplit=1)[
+                1]  # Get text after the numbering
+            if current_section == "key_issues":
+                key_issues.append(item_text)
+            elif current_section == "suggested_precedents":
+                suggested_precedents.append(item_text)
+            elif current_section == "improvement_areas":
+                improvement_areas.append(item_text)
+
+    # Create the structured return object
+    returnObj = {
+        "key_arguments": key_issues,
+        "suggested_precedents": suggested_precedents,
+        "improvement_areas": improvement_areas,
+    }
+
+    # Print for debugging (optional)
+    # print(returnObj)
+    return returnObj
 
 
 # res = query_pinecone(query_text)
