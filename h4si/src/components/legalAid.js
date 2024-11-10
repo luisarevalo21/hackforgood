@@ -1,6 +1,6 @@
 // src/components/LegalAidInterface.js
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Container,
   Paper,
@@ -16,33 +16,30 @@ import {
   CircularProgress,
   Card,
   CardContent,
-} from '@mui/material';
-import {
-  Description,
-  CheckCircle,
-  Warning,
-  ArrowForward,
-} from '@mui/icons-material';
+} from "@mui/material";
+import { Description, CheckCircle, Warning, ArrowForward } from "@mui/icons-material";
 
 const LegalAid = () => {
-  const [caseText, setCaseText] = useState('');
+  const [caseText, setCaseText] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
 
-
   const analyzePetition = async () => {
     setLoading(true);
-  
+
+    console.log("caseText", caseText);
     try {
-      const response = await fetch('http://localhost:5000/analyze_petition', {
-        method: 'POST',
+      const response = await fetch("http://127.0.0.1:8000/anaylze_user_input", {
+        method: "POST",
         headers: {
-            'Content-Type': 'application/json',
+          Accept: "application/json",
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ petition_text: caseText }),
+        body: JSON.stringify({ case_text: caseText }), // Updated to match the FastAPI expected key
       });
-  
+
       const data = await response.json();
+      console.log("data", data);
       setAnalysis(data);
     } catch (error) {
       console.error("Error analyzing petition:", error);
@@ -51,51 +48,51 @@ const LegalAid = () => {
     }
   };
 
-//   const analyzePetition = async () => {
-//     setLoading(true);
-  
-//     try {
-//       const response = await fetch('/analyze_petition', {
-//         method: 'POST',
-//         headers: {
-//             'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify({ petition_text: caseText }),
-//       });
-  
-//       const data = await response.json();
-//       setAnalysis(data);
-//     } catch (error) {
-//       console.error("Error analyzing petition:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+  //   const analyzePetition = async () => {
+  //     setLoading(true);
 
-//   const analyzePetition = async () => {
-//     setLoading(true);
-//     // Simulated API call
-//     setTimeout(() => {
-//       setAnalysis({
-//         success_probability: 0.75,
-//         key_arguments: [
-//           "Persistent maintenance issues reported multiple times",
-//           "Violations of local housing codes",
-//           "Documented communication attempts with landlord"
-//         ],
-//         suggested_precedents: [
-//           "Case #2021-15: Similar maintenance issues, favorable outcome",
-//           "Case #2022-08: Successful petition based on code violations"
-//         ],
-//         improvement_areas: [
-//           "Include more photographic evidence",
-//           "Add specific dates of maintenance requests",
-//           "Reference relevant local ordinances"
-//         ]
-//       });
-//       setLoading(false);
-//     }, 1500);
-//   };
+  //     try {
+  //       const response = await fetch('/analyze_petition', {
+  //         method: 'POST',
+  //         headers: {
+  //             'Content-Type': 'application/json',
+  //         },
+  //         body: JSON.stringify({ petition_text: caseText }),
+  //       });
+
+  //       const data = await response.json();
+  //       setAnalysis(data);
+  //     } catch (error) {
+  //       console.error("Error analyzing petition:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   const analyzePetition = async () => {
+  //     setLoading(true);
+  //     // Simulated API call
+  //     setTimeout(() => {
+  //       setAnalysis({
+  //         success_probability: 0.75,
+  //         key_arguments: [
+  //           "Persistent maintenance issues reported multiple times",
+  //           "Violations of local housing codes",
+  //           "Documented communication attempts with landlord"
+  //         ],
+  //         suggested_precedents: [
+  //           "Case #2021-15: Similar maintenance issues, favorable outcome",
+  //           "Case #2022-08: Successful petition based on code violations"
+  //         ],
+  //         improvement_areas: [
+  //           "Include more photographic evidence",
+  //           "Add specific dates of maintenance requests",
+  //           "Reference relevant local ordinances"
+  //         ]
+  //       });
+  //       setLoading(false);
+  //     }, 1500);
+  //   };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -114,7 +111,7 @@ const LegalAid = () => {
           variant="outlined"
           placeholder="Enter your petition details here..."
           value={caseText}
-          onChange={(e) => setCaseText(e.target.value)}
+          onChange={e => setCaseText(e.target.value)}
           sx={{ mb: 2 }}
         />
 
@@ -125,12 +122,12 @@ const LegalAid = () => {
           onClick={analyzePetition}
           startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
         >
-          {loading ? 'Analyzing...' : 'Analyze Petition'}
+          {loading ? "Analyzing..." : "Analyze Petition"}
         </Button>
       </Paper>
 
       {analysis && (
-        <Box sx={{ mt: 4, gap: 3, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ mt: 4, gap: 3, display: "flex", flexDirection: "column" }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -144,6 +141,7 @@ const LegalAid = () => {
                 Key Arguments Identified:
               </Typography>
               <List>
+                {/* {console.log(analysis.key_arguments)} */}
                 {analysis.key_arguments.map((arg, i) => (
                   <ListItem key={i}>
                     <ListItemIcon>
@@ -168,11 +166,7 @@ const LegalAid = () => {
                 ))}
               </List>
 
-              <Alert 
-                severity="warning"
-                icon={<Warning />}
-                sx={{ mt: 2 }}
-              >
+              <Alert severity="warning" icon={<Warning />} sx={{ mt: 2 }}>
                 <Typography variant="h6" gutterBottom>
                   Suggested Improvements:
                 </Typography>
